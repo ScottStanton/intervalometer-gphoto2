@@ -1,4 +1,4 @@
-# intervelometer
+# Intervelometer-gphoto2
 This is an intervelometer using the gphoto2 software.  It is designed to be used to take pictures on an all day or multiday basis.  It can also be used for shorter intervals that you specify.
 
 I was unable to get the gphoto2 python library to load on my system, so I installed the software and I'm running the os command from the python program. This means you'll need to have the gphoto2 software installed on your host for this to work.
@@ -6,11 +6,11 @@ I was unable to get the gphoto2 python library to load on my system, so I instal
 
 Prerequisites:
 These are the python packages that you will need to have installed for this to work.
-*Python3
-*argparse
-*astral
-*datetime
-*time
+* Python3
+* argparse
+* astral
+* datetime
+* time
 
 
 ## Usage:
@@ -42,5 +42,5 @@ optional arguments:
 ```
 
 Need to add:
-*specify a base directory instead of using cwd
-*daily and/or hourly transfers of files to another location (sftp, scp)
+* specify a base directory instead of using cwd
+* daily and/or hourly transfers of files to another location (sftp, scp)

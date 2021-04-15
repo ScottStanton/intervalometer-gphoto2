@@ -3,6 +3,7 @@ This is an intervelometer using the gphoto2 software.  It is designed to be used
 
 I was unable to get the gphoto2 python library to load on my system, so I installed the software and I'm running the os command from the python program. This means you'll need to have the gphoto2 software installed on your host for this to work.
 
+
 Prerequisites:
 These are the python packages that you will need to have installed for this to work.
 *Python3

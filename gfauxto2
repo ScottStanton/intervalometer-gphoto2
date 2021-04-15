@@ -1,0 +1,6 @@
+#!/bin/bash
+touch capt0000.jpg
+echo "New file is in location /capt0000.jpg on the camera"
+echo "Saving file as capt0000.jpg"
+echo "Deleting file /capt0000.jpg on the camera"
+

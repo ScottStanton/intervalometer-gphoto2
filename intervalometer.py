@@ -51,60 +51,6 @@ if args.latitude and not args.longitude:
 if args.startstop and args.offset:
     parser.error("--offset cannot be used with --startstop. Do your own math.")
     
-
-##### Set default arguments  #####
-
-picture_number = 0     # You have to start counting pictures with some number
-
-this_day = 1     # Start on day 1 in case of multi-day events.
-
-if not args.multiday:
-    total_days = 1
-else:
-    total_days = args.multiday
-debug_print('INIT: multiday value is ' + total_days)
-
-if not args.offset:
-    offset = 0
-else:
-    offset = args.offset[0]
-
-if not args.dir:
-    dir = '/data'
-else:
-    dir = args.dir[0]
-
-now = time.localtime()
-if not args.project:
-    filename = str(time.strftime("%Y-%m-%d-", now))
-else:
-    filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
-debug_print('INIT: filename is ' + filename)
-
-if args.longitude and args.latitude:
-    loc = LocationInfo(name='Custom',latitude=args.latitude[0], longitude=args.longitude[0])
-else:
-    loc = LocationInfo(name='Raleigh', region='NC, USA', timezone='America/New_York',
-                       latitude=35.78, longitude=-78.64)
-
-proc1 = subprocess.Popen(['gphoto2', '--auto-detect'], stdout=subprocess.PIPE)
-proc2 = subprocess.Popen(['wc', '-l'], stdin=proc1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-proc1.stdout.close() # Allow proc1 to receive a SIGPIPE if proc2 exits.
-out, err = proc2.communicate()
-print(out.strip())
-if int(out.strip()) <= 2:
-    args.faux = True
-    debug_print('No camera found - using gfauxto2 to simulate pictures')
-else:
-    debug_print('Camera found - using gphoto2 to take pictures')
-proc2.stdout.close()
-proc2.stderr.close()
-
-path = '/'.join([dir,args.project[0],''])
-os.makedirs(path, mode=0o775, exist_ok=True)
-os.chdir(path)
-debug_print('INIT: path is ' + path)
-
 ######  Subroutines   #####
 
 def debug_print(string):
@@ -125,8 +71,9 @@ def take_picture(basename):
     for line in result.split('\n'):
         if line.startswith('Saving file as'):
             capture_filename = line.split()
-    os.rename(capture_filename[3], dir + '/' + args.project + '/' + filename + str(picture_number).zfill(4) + '.jpg')
-    picture_number += 1 
+    os.rename(capture_filename[3], dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
+    debug_print('Move file to ' +  dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
+    picture_number += 1
 
 def waitforrighttime():
     #####   This loop will check the time and wait until we get to the correct time to exit the loop.  #####
@@ -135,8 +82,8 @@ def waitforrighttime():
         now = time.localtime()
         current_hour = int(time.strftime("%H", now))
         current_min = int(time.strftime("%M", now))
-        debug_print('Current time: ' + str(current_hour) + ':' + str(current_min))
-        debug_print('Start time: ' + str(start_hour) + ':' + str(start_min))
+        debug_print('Current time: ' + str(current_hour).zfill(2) + ':' + str(current_min).zfill(2))
+        debug_print('Start time: ' + str(start_hour).zfill(2) + ':' + str(start_min).zfill(2))
 
         if current_hour < start_hour:
             debug_print('We have a while to wait, sleeping until the next hour checkpoint')
@@ -163,8 +110,8 @@ def takepicturesandstop():
         now = time.localtime()
         current_hour = int(time.strftime("%H", now))
         current_min = int(time.strftime("%M", now))
-        debug_print('Current time: ' + str(current_hour) + ':' + str(current_min))
-        debug_print('Stop time: ' + str(stop_hour) + ':' + str(stop_min))
+        debug_print('Current time: ' + str(current_hour).zfill(2) + ':' + str(current_min).zfill(2))
+        debug_print('Stop time: ' + str(stop_hour).zfill(2) + ':' + str(stop_min).zfill(2))
 
         if current_hour == stop_hour:
             debug_print('The hour to stop has arrived... but has the minute arrived?')
@@ -174,10 +121,63 @@ def takepicturesandstop():
         elif current_hour > stop_hour:
             debug_print('This should never happen, but typos do occur and math is hard')
             break
-    
+
         debug_print('Time to take a picture')
         take_picture(filename)
         time.sleep(args.interval)
+
+
+##### Set default arguments  #####
+
+picture_number = 0     # You have to start counting pictures with some number
+
+this_day = 1     # Start on day 1 in case of multi-day events.
+
+if not args.multiday:
+    total_days = 1
+else:
+    total_days = args.multiday[0]
+debug_print('INIT: multiday value is ' + str(total_days))
+
+if not args.offset:
+    offset = 0
+else:
+    offset = args.offset[0]
+
+if not args.dir:
+    dir = '/data'
+else:
+    dir = args.dir[0]
+
+now = time.localtime()
+if not args.project:
+    filename = str(time.strftime("%Y-%m-%d-", now))
+else:
+    filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
+debug_print('INIT: filename is ' + filename + '####')
+
+if args.longitude and args.latitude:
+    loc = LocationInfo(name='Custom',latitude=args.latitude[0], longitude=args.longitude[0])
+else:
+    loc = LocationInfo(name='Raleigh', region='NC, USA', timezone='America/New_York',
+                       latitude=35.78, longitude=-78.64)
+
+proc1 = subprocess.Popen(['gphoto2', '--auto-detect'], stdout=subprocess.PIPE)
+proc2 = subprocess.Popen(['wc', '-l'], stdin=proc1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+proc1.stdout.close() # Allow proc1 to receive a SIGPIPE if proc2 exits.
+out, err = proc2.communicate()
+if int(out.strip()) <= 2:
+    args.faux = True
+    debug_print('No camera found - using gfauxto2 to simulate pictures')
+else:
+    debug_print('Camera found - using gphoto2 to take pictures')
+proc2.stdout.close()
+proc2.stderr.close()
+
+path = '/'.join([dir,args.project[0],''])
+os.makedirs(path, mode=0o775, exist_ok=True)
+os.chdir(path)
+debug_print('INIT: path is ' + path)
 
 
 ##### Setting up the start and stop times for the day                      #####
@@ -210,7 +210,7 @@ if start_hour < 0:
     start_hour = 24 + start_hour
 if stop_hour > 23:
     stop_hour = stop_hour - 24
-debug_print('Start Time: ' + str(start_hour) + ':' + str(start_min) + ' Stop time: ' + str(stop_hour) + ':' + str(stop_min))
+debug_print('Start Time: ' + str(start_hour).zfill(2) + ':' + str(start_min).zfill(2) + ' Stop time: ' + str(stop_hour).zfill(2) + ':' + str(stop_min).zfill(2))
 
 
 ##### We should have sane values, so it time to get to work.   #####

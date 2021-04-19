@@ -21,17 +21,23 @@ parser.add_argument('-i','--interval', required=True, type=int,
        metavar='###', help="Time between pictures in seconds.")
 parser.add_argument('-s','--startstop', nargs=2,
        metavar='HH:MM', help="List start and stop in 24 hour format. Default is to start at dawn and stop at dusk")
-parser.add_argument('-p','--prepost', nargs=1, type=int, default=0,
+parser.add_argument('-o','--offset', nargs=1, type=int, default=0,
        metavar='#', help="How many hours before dawn to start, and after dusk to stop.")
 parser.add_argument('-m','--multiday', nargs=1, type=int, default=1,
        metavar='#', help="How many days to run the program for.  Default is 1.")
-parser.add_argument('-f','--filename', nargs=1, type=str, required=True,
-       metavar='filename', help="Base filename to be used to save the files")
+parser.add_argument('-d','--dir', nargs=1, type=str,
+       metavar='directory', help="Full directory path to save the project to.  Defaults to /data.")
+parser.add_argument('-p','--project', nargs=1, type=str, required=True,
+       metavar='project', help="Name of the project you are taking pictures for.  This directory will be created if it doesn't exist.")
+parser.add_argument('-f','--faux', action='store_true',
+       help="Use the gfauxto2 command to simulate taking pictures.  Will create empty files instead of taking pictures.")
 parser.add_argument('-t','--latitude', nargs=1, type=float,
        metavar='xx.yyy', help="Latitude to calculate dawn and dusk. Default is 35.78")
 parser.add_argument('-g','--longitude', nargs=1, type=float,
        metavar='xx.yyy', help="Longitude to calculate dawn and dusk. Default is -78.64")
-parser.add_argument('-d','--debug', action='store_true',
+parser.add_argument('-b','--backup', nargs=1, type=str,
+       metavar='backup target', help="I don't know what this looks like yet.  Not implemented.")
+parser.add_argument('-v','--verbose', action='store_true',
        help="Show debugging messages on the command line")
 
 args = parser.parse_args()
@@ -42,8 +48,8 @@ if args.longitude and not args.latitude:
     parser.error("--longitude requires --latitude")
 if args.latitude and not args.longitude:
     parser.error("--latitude requires --longitude")
-if args.startstop and args.prepost:
-    parser.error("--prepost cannot be used with --startstop. Do your own math.")
+if args.startstop and args.offset:
+    parser.error("--offset cannot be used with --startstop. Do your own math.")
     
 
 ##### Set default arguments  #####
@@ -56,19 +62,24 @@ if not args.multiday:
     total_days = 1
 else:
     total_days = args.multiday
+debug_print('INIT: multiday value is ' + total_days)
 
-if not args.prepost:
-    prepost = 0
+if not args.offset:
+    offset = 0
 else:
-    prepost = args.prepost[0]
+    offset = args.offset[0]
+
+if not args.dir:
+    dir = '/data'
+else:
+    dir = args.dir[0]
 
 now = time.localtime()
-if not args.filename:
+if not args.project:
     filename = str(time.strftime("%Y-%m-%d-", now))
 else:
-    filename = args.filename[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
-
-now = time.localtime()
+    filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
+debug_print('INIT: filename is ' + filename)
 
 if args.longitude and args.latitude:
     loc = LocationInfo(name='Custom',latitude=args.latitude[0], longitude=args.longitude[0])
@@ -76,12 +87,29 @@ else:
     loc = LocationInfo(name='Raleigh', region='NC, USA', timezone='America/New_York',
                        latitude=35.78, longitude=-78.64)
 
+proc1 = subprocess.Popen(['gphoto2', '--auto-detect'], stdout=subprocess.PIPE)
+proc2 = subprocess.Popen(['wc', '-l'], stdin=proc1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+proc1.stdout.close() # Allow proc1 to receive a SIGPIPE if proc2 exits.
+out, err = proc2.communicate()
+print(out.strip())
+if int(out.strip()) <= 2:
+    args.faux = True
+    debug_print('No camera found - using gfauxto2 to simulate pictures')
+else:
+    debug_print('Camera found - using gphoto2 to take pictures')
+proc2.stdout.close()
+proc2.stderr.close()
+
+path = '/'.join([dir,args.project[0],''])
+os.makedirs(path, mode=0o775, exist_ok=True)
+os.chdir(path)
+debug_print('INIT: path is ' + path)
 
 ######  Subroutines   #####
 
 def debug_print(string):
     # Add print statement here is -v is set.  Still have to figure out how to set it.
-    if args.debug:
+    if args.verbose:
         now = time.localtime()
         debug_time = str(time.strftime("%H:%M:%S ", now))
         print('DEBUG: ' + debug_time + string)
@@ -89,13 +117,15 @@ def debug_print(string):
 def take_picture(basename):
     global picture_number
     debug_print('*click* ' + str(picture_number).zfill(4))
-    #result = subprocess.run(['gphoto2', '--capture-image-and-download'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    result = subprocess.run(['/home/pi/bin/gfauxto2', '--capture-image-and-download'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    if args.faux:
+        result = subprocess.run(['/home/pi/bin/gfauxto2', '--capture-image-and-download'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    else:
+        result = subprocess.run(['gphoto2', '--capture-image-and-download'], stdout=subprocess.PIPE).stdout.decode('utf-8')
     debug_print('gphoto output: ' + result)
     for line in result.split('\n'):
         if line.startswith('Saving file as'):
             capture_filename = line.split()
-    os.rename(capture_filename[3], filename + str(picture_number).zfill(4) + '.jpg')
+    os.rename(capture_filename[3], dir + '/' + args.project + '/' + filename + str(picture_number).zfill(4) + '.jpg')
     picture_number += 1 
 
 def waitforrighttime():
@@ -161,9 +191,9 @@ if args.startstop:
 else:
     s = sun(loc.observer, date=datetime.date.today(), tzinfo=loc.timezone)
 
-    start_hour = int(str(s['dawn'])[11:13]) - prepost
+    start_hour = int(str(s['dawn'])[11:13]) - offset
     start_min = int(str(s['dawn'])[14:16])
-    stop_hour = int(str(s['dusk'])[11:13]) + prepost
+    stop_hour = int(str(s['dusk'])[11:13]) + offset
     stop_min = int(str(s['dusk'])[14:16])
 
 #####  Now that we have subtracted and added to time, we need to make sure that the  ######
@@ -194,6 +224,7 @@ while True:
     waitforrighttime()      # This loop is a matter of sleeping until the correct time.
     takepicturesandstop()   # This loop takes pictures and looks for the stopping time.
 
+    debug_print('This is ' + str(this_day) + ' of total days ' + str(total_days))
     if this_day == total_days:
         break
 
@@ -210,16 +241,16 @@ while True:
         now = time.localtime()
         current_hour = int(time.strftime("%H", now))
 
-    picture_numer = 0     # At the end of the day we rest the picture number back to 0
+    debug_print('Reset the picture_number to 0000')
+    picture_number = 0     # At the end of the day we rest the picture number back to 0
     time.sleep(60)        # Sleep for another minute to make sure we are past midnight
 
     now = time.localtime()
-    if not args.filename:
+    debug_print('Set the filename to the next day')
+    if not args.project:
         filename = str(time.strftime("%Y-%m-%d-", now))
     else:
         filename = args.filename[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
-
-    picture_number = 0    # Reset the picture number for each day.
 
     this_day += 1
 

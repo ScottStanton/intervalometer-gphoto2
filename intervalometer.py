@@ -12,6 +12,9 @@ import sys
 import time
 from astral.sun import sun
 from astral import LocationInfo
+from paramiko import SSHClient
+from scp import SCPClient
+
 
 # Setting up the command line arguments  #####
 #
@@ -35,8 +38,8 @@ parser.add_argument('-t','--latitude', nargs=1, type=float,
        metavar='xx.yyy', help="Latitude to calculate dawn and dusk. Default is 35.78")
 parser.add_argument('-g','--longitude', nargs=1, type=float,
        metavar='xx.yyy', help="Longitude to calculate dawn and dusk. Default is -78.64")
-parser.add_argument('-b','--backup', nargs=1, type=str,
-       metavar='backup target', help="I don't know what this looks like yet.  Not implemented.")
+parser.add_argument('-b','--backup', nargs=2, type=str,
+       metavar=('hostname','destination_directory'), help="Hostname and  Destination directory to backup to.  Must have paswordless scp setup to the host.")
 parser.add_argument('-v','--verbose', action='store_true',
        help="Show debugging messages on the command line")
 
@@ -60,7 +63,7 @@ def debug_print(string):
         debug_time = str(time.strftime("%H:%M:%S ", now))
         print('DEBUG: ' + debug_time + string)
 
-def take_picture(basename):
+def take_picture():
     global picture_number
     debug_print('*click* ' + str(picture_number).zfill(4))
     if args.faux:
@@ -74,6 +77,38 @@ def take_picture(basename):
     os.rename(capture_filename[3], dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
     debug_print('Move file to ' +  dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
     picture_number += 1
+
+def backup_picture():
+    debug_print('Backing up picture')
+    now = time.localtime()
+    before_min = int(time.strftime("%M", now))
+    before_sec = int(time.strftime("%S", now))
+
+    ssh = SSHClient()
+    ssh.load_system_host_keys()
+    ssh.connect(args.backup[0])
+    debug_print('SSH connection to ' + args.backup[0] + ' is open.')
+
+    scp = SCPClient(ssh.get_transport())
+    debug_print('Copy ' + dir + '/' + args.project[0] + '/' + filename + str(picture_number - 1).zfill(4) + '.jpg to ' + args.backup[1])
+    scp.put(dir + '/' + args.project[0] + '/' + filename + str(picture_number - 1).zfill(4) + '.jpg',args.backup[1])
+
+    scp.close()
+    ssh.close()
+    now = time.localtime()
+    after_min = int(time.strftime("%M", now))
+    after_sec = int(time.strftime("%S", now))
+
+    if after_min < before_min:
+        after_min += 60
+    if after_sec < before_sec:
+        after_sec += 60
+    change_min = after_min - before_min
+    change_sec = after_sec - before_sec
+    change = change_sec + (60 * change_min)
+    debug_print('Copy process took ' + str(change) + ' seconds')
+    return change
+
 
 def waitforrighttime():
     #####   This loop will check the time and wait until we get to the correct time to exit the loop.  #####
@@ -123,20 +158,34 @@ def takepicturesandstop():
             break
 
         debug_print('Time to take a picture')
-        take_picture(filename)
-        time.sleep(args.interval)
+        take_picture()
+
+        sleep_time = args.interval
+
+        if args.backup:
+            sleeptime = backup_picture()
+            sleep_time = args.interval - sleeptime
+        if sleep_time < 0:
+            sleep_time = 0
+
+        debug_print('Sleep for ' + str(sleep_time) + ' seconds')
+        time.sleep(sleep_time)
 
 
 ##### Set default arguments  #####
 
 picture_number = 0     # You have to start counting pictures with some number
 
+last_picture_transfered = 0
+
+last_hour = 0
+
 this_day = 1     # Start on day 1 in case of multi-day events.
 
-if not args.multiday:
-    total_days = 1
-else:
-    total_days = args.multiday[0]
+#if not args.multiday:
+#    total_days = 1
+#else:
+total_days = args.multiday
 debug_print('INIT: multiday value is ' + str(total_days))
 
 if not args.offset:
@@ -242,6 +291,7 @@ while True:
         current_hour = int(time.strftime("%H", now))
 
     debug_print('Reset the picture_number to 0000')
+    last_picture_transfered = 0
     picture_number = 0     # At the end of the day we rest the picture number back to 0
     time.sleep(60)        # Sleep for another minute to make sure we are past midnight
 

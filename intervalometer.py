@@ -45,8 +45,8 @@ parser.add_argument('-v','--verbose', action='store_true',
 
 args = parser.parse_args()
 
-# Checking for conflicting arguments  #####
-#
+##### Checking for conflicting arguments  #####
+
 if args.longitude and not args.latitude:
     parser.error("--longitude requires --latitude")
 if args.latitude and not args.longitude:
@@ -62,6 +62,7 @@ def debug_print(string):
         now = time.localtime()
         debug_time = str(time.strftime("%H:%M:%S ", now))
         print('DEBUG: ' + debug_time + string)
+## End of function
 
 def take_picture():
     global picture_number
@@ -77,6 +78,7 @@ def take_picture():
     os.rename(capture_filename[3], dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
     debug_print('Move file to ' +  dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
     picture_number += 1
+## End of function
 
 def backup_picture():
     debug_print('Backing up picture')
@@ -86,10 +88,31 @@ def backup_picture():
 
     ssh = SSHClient()
     ssh.load_system_host_keys()
-    ssh.connect(args.backup[0])
-    debug_print('SSH connection to ' + args.backup[0] + ' is open.')
+    if '@' in args.backup[0]:
+       dest_user,dest_host = args.backup[0].split('@')
+       debug_print('INIT: Destination user is ' + dest_user)
+       ssh.connect(dest_host, username=dest_user)
+    else:
+       dest_host = args.backup[0]
+       dest_user = ''
+       ssh.connect(dest_host)
+
+        
+    debug_print('SSH connection to ' + dest_host + ' is open.')
 
     scp = SCPClient(ssh.get_transport())
+    file_name = filename + str(picture_number - 1).zfill(4) + '.jpg'
+    full_source = dir + '/' + args.project[0] + '/' + file_name
+    if ':' in args.backup[1]:
+        full_dest = dest_user + '@' + dest_host + ':' + '\\'.join([args.backup[1],file_name])
+        debug_print('scp destination: ' + full_dest)
+        subprocess.Popen(["/usr/bin/scp", full_source, )
+    else:
+        full_dest = '/'.join([args.backup[1],filename])
+        debug_print('scp destination: ' + full_dest)
+        scp.put(full_source, full_dest)
+    debug_print('Copy ' + dir + '/' + args.project[0] + '/' + file_name + ' to ' + full_dest)
+
     debug_print('Copy ' + dir + '/' + args.project[0] + '/' + filename + str(picture_number - 1).zfill(4) + '.jpg to ' + args.backup[1])
     scp.put(dir + '/' + args.project[0] + '/' + filename + str(picture_number - 1).zfill(4) + '.jpg',args.backup[1])
 
@@ -108,6 +131,7 @@ def backup_picture():
     change = change_sec + (60 * change_min)
     debug_print('Copy process took ' + str(change) + ' seconds')
     return change
+## End of function
 
 
 def waitforrighttime():
@@ -137,6 +161,9 @@ def waitforrighttime():
                 debug_print('Start minute is greater or equal to current minute')
                 debug_print('Ending loop 1')
                 break
+    ## End of while loop
+## End of function
+
 
 def takepicturesandstop():
     #This loop will take pictures every *interval* seconds and watch for the stop time
@@ -170,6 +197,8 @@ def takepicturesandstop():
 
         debug_print('Sleep for ' + str(sleep_time) + ' seconds')
         time.sleep(sleep_time)
+    ## End of while loop
+## End of function
 
 
 ##### Set default arguments  #####
@@ -182,9 +211,6 @@ last_hour = 0
 
 this_day = 1     # Start on day 1 in case of multi-day events.
 
-#if not args.multiday:
-#    total_days = 1
-#else:
 total_days = args.multiday
 debug_print('INIT: multiday value is ' + str(total_days))
 
@@ -273,8 +299,9 @@ while True:
     waitforrighttime()      # This loop is a matter of sleeping until the correct time.
     takepicturesandstop()   # This loop takes pictures and looks for the stopping time.
 
-    debug_print('This is ' + str(this_day) + ' of total days ' + str(total_days))
+    debug_print('This is ' + str(this_day) + ' of ' + str(total_days) + ' days')
     if this_day == total_days:
+        debug_print(this_day + ' is the same as ' + total_days + '. Ending the loop.')
         break
 
     now = time.localtime()
@@ -300,8 +327,11 @@ while True:
     if not args.project:
         filename = str(time.strftime("%Y-%m-%d-", now))
     else:
-        filename = args.filename[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
+        filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
+    debug_print('New filename: ' + filename)
 
     this_day += 1
+
+    ## End of while loop
 
 debug_print('End of Program.')

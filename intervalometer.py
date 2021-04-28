@@ -103,18 +103,10 @@ def backup_picture():
     scp = SCPClient(ssh.get_transport())
     file_name = filename + str(picture_number - 1).zfill(4) + '.jpg'
     full_source = dir + '/' + args.project[0] + '/' + file_name
-    if ':' in args.backup[1]:
-        full_dest = dest_user + '@' + dest_host + ':' + '\\'.join([args.backup[1],file_name])
-        debug_print('scp destination: ' + full_dest)
-        subprocess.Popen(["/usr/bin/scp", full_source, )
-    else:
-        full_dest = '/'.join([args.backup[1],filename])
-        debug_print('scp destination: ' + full_dest)
-        scp.put(full_source, full_dest)
-    debug_print('Copy ' + dir + '/' + args.project[0] + '/' + file_name + ' to ' + full_dest)
-
-    debug_print('Copy ' + dir + '/' + args.project[0] + '/' + filename + str(picture_number - 1).zfill(4) + '.jpg to ' + args.backup[1])
-    scp.put(dir + '/' + args.project[0] + '/' + filename + str(picture_number - 1).zfill(4) + '.jpg',args.backup[1])
+    dest_path = args.backup[1].replace('\\','/')
+    full_dest = dest_user + '@' + dest_host + ':' + '/'.join([dest_path,file_name])
+    scp.put(full_source, full_dest)
+    debug_print('Copy ' + full_source + ' to ' + full_dest)
 
     scp.close()
     ssh.close()

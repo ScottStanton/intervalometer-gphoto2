@@ -16,8 +16,8 @@ from paramiko import SSHClient
 from scp import SCPClient
 
 
-# Setting up the command line arguments  #####
-#
+##### Setting up the command line arguments  #####
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-i','--interval', required=True, type=int,
@@ -56,6 +56,13 @@ if args.startstop and args.offset:
     
 ######  Subroutines   #####
 
+def current_time():
+    now = time.localtime()
+    now_hour = int(time.strftime("%H", now))
+    now_min = int(time.strftime("%M", now))
+    now_sec = int(time.strftime("%S", now))
+    return now_hour, now_min, now_sec
+
 def debug_print(string):
     # Add print statement here is -v is set.  Still have to figure out how to set it.
     if args.verbose:
@@ -82,9 +89,7 @@ def take_picture():
 
 def backup_picture():
     debug_print('Backing up picture')
-    now = time.localtime()
-    before_min = int(time.strftime("%M", now))
-    before_sec = int(time.strftime("%S", now))
+    before_hour, before_min, before_sec = current_time()
 
     ssh = SSHClient()
     ssh.load_system_host_keys()
@@ -110,9 +115,7 @@ def backup_picture():
 
     scp.close()
     ssh.close()
-    now = time.localtime()
-    after_min = int(time.strftime("%M", now))
-    after_sec = int(time.strftime("%S", now))
+    after_hour, after_min, after_sec = current_time()
 
     if after_min < before_min:
         after_min += 60
@@ -130,9 +133,7 @@ def waitforrighttime():
     #####   This loop will check the time and wait until we get to the correct time to exit the loop.  #####
     debug_print('Waiting for the correct time to take pictures')
     while True:
-        now = time.localtime()
-        current_hour = int(time.strftime("%H", now))
-        current_min = int(time.strftime("%M", now))
+        current_hour, current_min, current_sec = current_time()
         debug_print('Current time: ' + str(current_hour).zfill(2) + ':' + str(current_min).zfill(2))
         debug_print('Start time: ' + str(start_hour).zfill(2) + ':' + str(start_min).zfill(2))
 
@@ -161,9 +162,7 @@ def takepicturesandstop():
     #This loop will take pictures every *interval* seconds and watch for the stop time
     debug_print('Time to start looping through taking pictures and checking stop times.')
     while True:
-        now = time.localtime()
-        current_hour = int(time.strftime("%H", now))
-        current_min = int(time.strftime("%M", now))
+        current_hour, current_min, current_sec = current_time()
         debug_print('Current time: ' + str(current_hour).zfill(2) + ':' + str(current_min).zfill(2))
         debug_print('Stop time: ' + str(stop_hour).zfill(2) + ':' + str(stop_min).zfill(2))
 
@@ -182,14 +181,29 @@ def takepicturesandstop():
         sleep_time = args.interval
 
         if args.backup:
-            sleeptime = backup_picture()
-            sleep_time = args.interval - sleeptime
+            backup_seconds = backup_picture()
+            sleep_time = args.interval - backup_seconds
         if sleep_time < 0:
             sleep_time = 0
 
         debug_print('Sleep for ' + str(sleep_time) + ' seconds')
         time.sleep(sleep_time)
     ## End of while loop
+## End of function
+
+def wait_for_end_of_day():
+    debug_print('Enter wait_for_end_of_day')
+    current_hour, current_min, current_sec = current_time()
+    seconds_to_sleep = 60 * (60 - current_min)
+    debug_print('Sleeping until the top of the hour.  About ' + str(seconds_to_sleep) + ' seconds away')
+    time.sleep(seconds_to_sleep)
+
+    current_hour, current_min, current_sec = current_time()
+
+    while current_hour > 0:
+        debug_print('It is not tomorrow yet, sleeping another hour.')
+        time.sleep(3600) #hour
+        current_hour, current_min, current_sec = current_time()
 ## End of function
 
 
@@ -203,13 +217,14 @@ last_hour = 0
 
 this_day = 1     # Start on day 1 in case of multi-day events.
 
-total_days = args.multiday
+total_days = int(args.multiday[0])
 debug_print('INIT: multiday value is ' + str(total_days))
 
 if not args.offset:
     offset = 0
 else:
     offset = args.offset[0]
+debug_print('INIT: offset value is ' + str(offset))
 
 if not args.dir:
     dir = '/data'
@@ -280,6 +295,12 @@ if stop_hour > 23:
 debug_print('Start Time: ' + str(start_hour).zfill(2) + ':' + str(start_min).zfill(2) + ' Stop time: ' + str(stop_hour).zfill(2) + ':' + str(stop_min).zfill(2))
 
 
+current_hour, current_min, current_sec = current_time()
+if start_hour < current_hour:
+    debug_print('We need to wait until tomorrow')
+    wait_for_end_of_day()
+
+
 ##### We should have sane values, so it time to get to work.   #####
 ##### Loop in case there is a multi-day parameter.  If there   #####
 ##### is not multi-day we'll break from the loop after getting #####
@@ -296,18 +317,7 @@ while True:
         debug_print(this_day + ' is the same as ' + total_days + '. Ending the loop.')
         break
 
-    now = time.localtime()
-    current_hour = int(time.strftime("%H", now))
-    current_min = int(time.strftime("%M", now))
-    seconds_to_sleep = 60 * (60 - current_min)
-    debug_print('Sleeping until the top of the hour.  About ' + str(seconds_to_sleep) + ' seconds away')
-    time.sleep(seconds_to_sleep)
-
-    while current_hour > 0:
-        debug_print('It is not tomorrow yet, sleeping another hour.')
-        time.sleep(3600) #hour
-        now = time.localtime()
-        current_hour = int(time.strftime("%H", now))
+    wait_for_end_of_day()
 
     debug_print('Reset the picture_number to 0000')
     last_picture_transfered = 0

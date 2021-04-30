@@ -109,9 +109,9 @@ def backup_picture():
     file_name = filename + str(picture_number - 1).zfill(4) + '.jpg'
     full_source = dir + '/' + args.project[0] + '/' + file_name
     dest_path = args.backup[1].replace('\\','/')
-    full_dest = dest_user + '@' + dest_host + ':' + '/'.join([dest_path,file_name])
-    scp.put(full_source, full_dest)
+    full_dest = '/'.join([dest_path,file_name])
     debug_print('Copy ' + full_source + ' to ' + full_dest)
+    scp.put(full_source, full_dest)
 
     scp.close()
     ssh.close()

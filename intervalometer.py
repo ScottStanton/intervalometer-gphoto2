@@ -39,7 +39,7 @@ parser.add_argument('-t','--latitude', nargs=1, type=float,
 parser.add_argument('-g','--longitude', nargs=1, type=float,
        metavar='xx.yyy', help="Longitude to calculate dawn and dusk. Default is -78.64")
 parser.add_argument('-b','--backup', nargs=2, type=str,
-       metavar=('hostname','destination_directory'), help="Hostname and  Destination directory to backup to.  Must have paswordless scp setup to the host.")
+       metavar=('hostname','destination_directory'), help="Hostname and  Destination directory to backup to.  Must have passwordless scp setup to the host.")
 parser.add_argument('-v','--verbose', action='store_true',
        help="Show debugging messages on the command line")
 

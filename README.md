@@ -7,11 +7,12 @@ I was unable to get the gphoto2 python library to load on my system, so I instal
 ## Prerequisites:
 * Python 3.x is required to use this program.
 * The astral python package is required. 
+* The paramiko and scp python packages are required in case of backup.
 
 
 ## Usage:
 ```
-usage: intervalometer.py [-h] -i ### -p project [-s HH:MM HH:MM] [-o #] [-m #] [-d directory] [-t xx.yyy -g xx.yyy] [-f] [-v]
+usage: intervalometer.py [-h] -i ### -p project [-s HH:MM HH:MM] [-o #] [-m #] [-d directory] [-t xx.yyy -g xx.yyy] [-b hostname destination_directory] [-f] [-v]
 
 optional arguments:
   -h, --help                       show this help message and exit
@@ -24,10 +25,14 @@ optional arguments:
   -d directory, --dir directory    Full directory path to save the project to. Defaults to /data.
   -t xx.yyy, --latitude xx.yyy     Latitude to calculate dawn and dusk. Default is 35.78
   -g xx.yyy, --longitude xx.yyy    Longitude to calculate dawn and dusk. Default is -78.64
+  -b hostname destination_directory, --backup hostname destination_directory
+								   Hostname and Destination directory to backup to. Must have passwordless scp setup to the host.
+								   Hostname can be in the form user@host
+								   Destination can be unix or windows style paths.  c:\\path\\to\\files  or  /path/to/files
   -f, --faux                       Use the gfauxto2 command to simulate taking pictures. Will create empty files instead of taking pictures.
   -v, --verbose                    Show debugging messages on the command line
 
 ```
 
 ## Need to add:
-* daily and/or hourly transfers of files to another location (sftp, scp)
+I don't know what I need to add.  If you have suggestions, open an issue.

@@ -231,13 +231,6 @@ if not args.dir:
 else:
     dir = args.dir[0]
 
-now = time.localtime()
-if not args.project:
-    filename = str(time.strftime("%Y-%m-%d-", now))
-else:
-    filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
-debug_print('INIT: filename is ' + filename + '####')
-
 if args.longitude and args.latitude:
     loc = LocationInfo(name='Custom',latitude=args.latitude[0], longitude=args.longitude[0])
 else:
@@ -250,9 +243,9 @@ proc1.stdout.close() # Allow proc1 to receive a SIGPIPE if proc2 exits.
 out, err = proc2.communicate()
 if int(out.strip()) <= 2:
     args.faux = True
-    debug_print('No camera found - using gfauxto2 to simulate pictures')
+    debug_print('INIT: No camera found - using gfauxto2 to simulate pictures')
 else:
-    debug_print('Camera found - using gphoto2 to take pictures')
+    debug_print('INIT: Camera found - using gphoto2 to take pictures')
 proc2.stdout.close()
 proc2.stderr.close()
 
@@ -300,6 +293,14 @@ if start_hour < current_hour:
     debug_print('We need to wait until tomorrow')
     wait_for_end_of_day()
 
+
+time.sleep(60)        # Sleep for another minute to make sure we are past midnight
+now = time.localtime()
+if not args.project:
+    filename = str(time.strftime("%Y-%m-%d-", now))
+else:
+    filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
+debug_print('INIT: filename is ' + filename + '####')
 
 ##### We should have sane values, so it time to get to work.   #####
 ##### Loop in case there is a multi-day parameter.  If there   #####

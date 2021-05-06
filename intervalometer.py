@@ -315,7 +315,7 @@ while True:
 
     debug_print('This is ' + str(this_day) + ' of ' + str(total_days) + ' days')
     if this_day == total_days:
-        debug_print(this_day + ' is the same as ' + total_days + '. Ending the loop.')
+        debug_print(str(this_day) + ' is the same as ' + str(total_days) + '. Ending the loop.')
         break
 
     wait_for_end_of_day()

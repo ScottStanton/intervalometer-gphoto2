@@ -68,22 +68,22 @@ def debug_print(string):
     if args.verbose:
         now = time.localtime()
         debug_time = str(time.strftime("%H:%M:%S ", now))
-        print('DEBUG: ' + debug_time + string)
+        print(f'DEBUG: {debug_time} - {string}')
 ## End of function
 
 def take_picture():
     global picture_number
-    debug_print('*click* ' + str(picture_number).zfill(4))
+    debug_print(f'*click* {picture_number:0>4d}')
     if args.faux:
         result = subprocess.run(['/home/pi/bin/gfauxto2', '--capture-image-and-download'], stdout=subprocess.PIPE).stdout.decode('utf-8')
     else:
         result = subprocess.run(['gphoto2', '--capture-image-and-download'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    debug_print('gphoto output: ' + result)
+    debug_print(f'gphoto output: {result}')
     for line in result.split('\n'):
         if line.startswith('Saving file as'):
             capture_filename = line.split()
     os.rename(capture_filename[3], dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
-    debug_print('Move file to ' +  dir + '/' + args.project[0] + '/' + filename + str(picture_number).zfill(4) + '.jpg')
+    debug_print(f'Move file to {dir}/{args.project[0]}/{filename}{picture_number:0>4d}.jpg')
     picture_number += 1
 ## End of function
 
@@ -95,7 +95,7 @@ def backup_picture():
     ssh.load_system_host_keys()
     if '@' in args.backup[0]:
        dest_user,dest_host = args.backup[0].split('@')
-       debug_print('INIT: Destination user is ' + dest_user)
+       debug_print(f'INIT: Destination user is {dest_user}')
        ssh.connect(dest_host, username=dest_user)
     else:
        dest_host = args.backup[0]
@@ -103,14 +103,14 @@ def backup_picture():
        ssh.connect(dest_host)
 
         
-    debug_print('SSH connection to ' + dest_host + ' is open.')
+    debug_print(f'SSH connection to {dest_host} is open.')
 
     scp = SCPClient(ssh.get_transport())
     file_name = filename + str(picture_number - 1).zfill(4) + '.jpg'
     full_source = dir + '/' + args.project[0] + '/' + file_name
     dest_path = args.backup[1].replace('\\','/')
     full_dest = '/'.join([dest_path,file_name])
-    debug_print('Copy ' + full_source + ' to ' + full_dest)
+    debug_print(f'Copy {full_source} to {full_dest}')
     scp.put(full_source, full_dest)
 
     scp.close()
@@ -124,7 +124,7 @@ def backup_picture():
     change_min = after_min - before_min
     change_sec = after_sec - before_sec
     change = change_sec + (60 * change_min)
-    debug_print('Copy process took ' + str(change) + ' seconds')
+    debug_print(f'Copy process took {change!s} seconds')
     return change
 ## End of function
 
@@ -134,20 +134,20 @@ def waitforrighttime():
     debug_print('Waiting for the correct time to take pictures')
     while True:
         current_hour, current_min, current_sec = current_time()
-        debug_print('Current time: ' + str(current_hour).zfill(2) + ':' + str(current_min).zfill(2))
-        debug_print('Start time: ' + str(start_hour).zfill(2) + ':' + str(start_min).zfill(2))
+        debug_print(f'Current time: {current_hour:0>2d}:{current_min:0>2d}')
+        debug_print(f'Start time: {start_hour:0>2d}:{start_min:0>2d}')
 
         if current_hour < start_hour:
             debug_print('We have a while to wait, sleeping until the next hour checkpoint')
             seconds_to_sleep = 60 * (60 - int(time.strftime("%M", now)))
-            debug_print('Sleeping for ' + str(seconds_to_sleep) + ' seconds.')
+            debug_print(f'Sleeping for {seconds_to_sleep!s} seconds.')
             time.sleep(seconds_to_sleep)
         elif current_hour == start_hour:
             debug_print('Hours are the same')
             if current_min < start_min:
                  debug_print('We have minutes to wait...')
                  seconds_to_sleep = (60 * (start_min - current_min)) + 5
-                 debug_print('Sleeping for ' + str(seconds_to_sleep) + ' seconds.')
+                 debug_print(f'Sleeping for {seconds_to_sleep!s} seconds.')
                  time.sleep(seconds_to_sleep)
             else:
                 # if current_min >= start_min
@@ -163,8 +163,8 @@ def takepicturesandstop():
     debug_print('Time to start looping through taking pictures and checking stop times.')
     while True:
         current_hour, current_min, current_sec = current_time()
-        debug_print('Current time: ' + str(current_hour).zfill(2) + ':' + str(current_min).zfill(2))
-        debug_print('Stop time: ' + str(stop_hour).zfill(2) + ':' + str(stop_min).zfill(2))
+        debug_print(f'Current time: {current_hour:0>2d}:{current_min:0>2d}')
+        debug_print(f'Stop time: {stop_hour:0>2d}:{stop_min:0>2d}')
 
         if current_hour == stop_hour:
             debug_print('The hour to stop has arrived... but has the minute arrived?')
@@ -186,7 +186,7 @@ def takepicturesandstop():
         if sleep_time < 0:
             sleep_time = 0
 
-        debug_print('Sleep for ' + str(sleep_time) + ' seconds')
+        debug_print(f'Sleep for {sleep_time!s} seconds')
         time.sleep(sleep_time)
     ## End of while loop
 ## End of function
@@ -195,7 +195,7 @@ def wait_for_end_of_day():
     debug_print('Enter wait_for_end_of_day')
     current_hour, current_min, current_sec = current_time()
     seconds_to_sleep = 60 * (60 - current_min)
-    debug_print('Sleeping until the top of the hour.  About ' + str(seconds_to_sleep) + ' seconds away')
+    debug_print(f'Sleeping until the top of the hour.  About {seconds_to_sleep!s} seconds away')
     time.sleep(seconds_to_sleep)
 
     current_hour, current_min, current_sec = current_time()
@@ -218,13 +218,13 @@ last_hour = 0
 this_day = 1     # Start on day 1 in case of multi-day events.
 
 total_days = int(args.multiday[0])
-debug_print('INIT: multiday value is ' + str(total_days))
+debug_print(f'INIT: multiday value is {total_days!s}')
 
 if not args.offset:
     offset = 0
 else:
     offset = args.offset[0]
-debug_print('INIT: offset value is ' + str(offset))
+debug_print(f'INIT: offset value is {offset!s}')
 
 if not args.dir:
     dir = '/data'
@@ -252,7 +252,7 @@ proc2.stderr.close()
 path = '/'.join([dir,args.project[0],''])
 os.makedirs(path, mode=0o775, exist_ok=True)
 os.chdir(path)
-debug_print('INIT: path is ' + path)
+debug_print(f'INIT: path is {path}')
 
 
 ##### Setting up the start and stop times for the day                      #####
@@ -285,7 +285,7 @@ if start_hour < 0:
     start_hour = 24 + start_hour
 if stop_hour > 23:
     stop_hour = stop_hour - 24
-debug_print('Start Time: ' + str(start_hour).zfill(2) + ':' + str(start_min).zfill(2) + ' Stop time: ' + str(stop_hour).zfill(2) + ':' + str(stop_min).zfill(2))
+debug_print(f'Start Time: {start_hour:0>2d}:{start_min:0>2d} Stop time: {stop_hour:0>2d}:{stop_min:0>2d}')
 
 
 current_hour, current_min, current_sec = current_time()
@@ -300,7 +300,7 @@ if not args.project:
     filename = str(time.strftime("%Y-%m-%d-", now))
 else:
     filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
-debug_print('INIT: filename is ' + filename + '####')
+debug_print(f'INIT: filename is {filename}####')
 
 ##### We should have sane values, so it time to get to work.   #####
 ##### Loop in case there is a multi-day parameter.  If there   #####
@@ -313,9 +313,9 @@ while True:
     waitforrighttime()      # This loop is a matter of sleeping until the correct time.
     takepicturesandstop()   # This loop takes pictures and looks for the stopping time.
 
-    debug_print('This is ' + str(this_day) + ' of ' + str(total_days) + ' days')
+    debug_print(f'This is {this_day!s} of {total_days!s} days')
     if this_day == total_days:
-        debug_print(str(this_day) + ' is the same as ' + str(total_days) + '. Ending the loop.')
+        debug_print(f'{this_day!s} is the same as {total_days!s}. Ending the loop.')
         break
 
     wait_for_end_of_day()
@@ -331,7 +331,7 @@ while True:
         filename = str(time.strftime("%Y-%m-%d-", now))
     else:
         filename = args.project[0] + '-' + str(time.strftime("%Y-%m-%d-", now))
-    debug_print('New filename: ' + filename)
+    debug_print(f'New filename: {filename}')
 
     this_day += 1
 

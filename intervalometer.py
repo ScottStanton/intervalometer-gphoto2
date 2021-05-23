@@ -217,8 +217,8 @@ last_hour = 0
 
 this_day = 1     # Start on day 1 in case of multi-day events.
 
-total_days = int(args.multiday[0])
-debug_print(f'INIT: multiday value is {total_days!s}')
+total_days = args.multiday
+debug_print(f'INIT: multiday value is {total_days}')
 
 if not args.offset:
     offset = 0

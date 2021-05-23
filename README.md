@@ -35,4 +35,4 @@ optional arguments:
 ```
 
 ## Need to add:
-I don't know what I need to add.  If you have suggestions, open an issue.
+Add a light sensor (TSL2591) to the pi and camera settings to the program based on the light levels.

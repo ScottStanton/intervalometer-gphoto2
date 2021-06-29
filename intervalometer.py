@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 #
-# This software is covered by The Unlicense license
+# Written by ScottStanton
+# https://github.com/ScottStanton/
 #
+# This software is covered by The Unlicense license 
+#
+
 
 import argparse
 import datetime

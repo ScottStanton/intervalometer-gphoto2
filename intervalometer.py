@@ -210,6 +210,27 @@ def wait_for_end_of_day():
         current_hour, current_min, current_sec = current_time()
 ## End of function
 
+def start_stop_time_set():
+    global start_hour
+    global start_min
+    global stop_hour
+    global stop_min  
+    ##### Setting up the start and stop times for the day                      #####
+    ##### These either come from the command paramters or from dusk and dawn.  #####
+    
+    if args.startstop:
+        start_hour = int(args.startstop[0].split(':')[0])
+        start_min = int(args.startstop[0].split(':')[1])
+        stop_hour = int(args.startstop[1].split(':')[0])
+        stop_min = int(args.startstop[1].split(':')[1])
+    else:
+        s = sun(loc.observer, date=datetime.date.today(), tzinfo=loc.timezone)
+    
+        start_hour = int(str(s['dawn'])[11:13]) - offset
+        start_min = int(str(s['dawn'])[14:16])
+        stop_hour = int(str(s['dusk'])[11:13]) + offset
+        stop_min = int(str(s['dusk'])[14:16])
+
 
 ##### Set default arguments  #####
 
@@ -262,18 +283,7 @@ debug_print(f'INIT: path is {path}')
 ##### Setting up the start and stop times for the day                      #####
 ##### These either come from the command paramters or from dusk and dawn.  #####
 
-if args.startstop:
-    start_hour = int(args.startstop[0].split(':')[0])
-    start_min = int(args.startstop[0].split(':')[1])
-    stop_hour = int(args.startstop[1].split(':')[0])
-    stop_min = int(args.startstop[1].split(':')[1])
-else:
-    s = sun(loc.observer, date=datetime.date.today(), tzinfo=loc.timezone)
-
-    start_hour = int(str(s['dawn'])[11:13]) - offset
-    start_min = int(str(s['dawn'])[14:16])
-    stop_hour = int(str(s['dusk'])[11:13]) + offset
-    stop_min = int(str(s['dusk'])[14:16])
+start_stop_time_set()
 
 #####  Now that we have subtracted and added to time, we need to make sure that the  ######
 #####  numbers for minute and hour are still within what we expect for time.  If we  ######
@@ -327,7 +337,8 @@ while True:
     debug_print('Reset the picture_number to 0000')
     last_picture_transfered = 0
     picture_number = 0     # At the end of the day we rest the picture number back to 0
-    time.sleep(60)        # Sleep for another minute to make sure we are past midnight
+    time.sleep(60)         # Sleep for another minute to make sure we are past midnight
+    start_stop_time_set()  # In case of using location and running into DST changes
 
     now = time.localtime()
     debug_print('Set the filename to the next day')
